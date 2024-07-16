@@ -9,7 +9,6 @@ from sklearn.metrics import roc_curve, auc
 import joblib
 import requests
 from io import BytesIO
-import gdown
 import os
 import logging
 
@@ -25,11 +24,35 @@ def preprocess_text(text):
     text = text.lower()  # Convert to lowercase
     return text
 
-# Download model and tokenizer from Google Drive
-def download_from_drive(file_id, output):
-    url = f"https://drive.google.com/uc?export=download&id={file_id}"
-    gdown.download(url, output, quiet=True)
-    logging.info(f"Downloaded {output} from {url}")
+# Function to download file from Google Drive
+def download_from_drive(file_id, destination):
+    URL = "https://drive.google.com/uc?export=download"
+    
+    session = requests.Session()
+    
+    response = session.get(URL, params = { 'id' : file_id }, stream = True)
+    token = get_confirm_token(response)
+    
+    if token:
+        params = { 'id' : file_id, 'confirm' : token }
+        response = session.get(URL, params = params, stream = True)
+    
+    save_response_content(response, destination)    
+    logging.info(f"Downloaded {destination} from Google Drive file ID {file_id}")
+
+def get_confirm_token(response):
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            return value
+    return None
+
+def save_response_content(response, destination):
+    CHUNK_SIZE = 32768
+
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(CHUNK_SIZE):
+            if chunk: # filter out keep-alive new chunks
+                f.write(chunk)
 
 model_files = {
     "config.json": "1s9Ag8YFisAtcEMc9hXSTw15wLMlcnz6R",
