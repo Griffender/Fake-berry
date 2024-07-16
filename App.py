@@ -69,9 +69,21 @@ os.makedirs(model_dir, exist_ok=True)
 for filename, file_id in model_files.items():
     download_from_drive(file_id, os.path.join(model_dir, filename))
 
+# Verify that the model files have been downloaded correctly
+for filename in model_files.keys():
+    if not os.path.exists(os.path.join(model_dir, filename)):
+        raise FileNotFoundError(f"File {filename} not found in {model_dir}. Please check the file ID and try again.")
+
 # Load the AI detection model and tokenizer
 tokenizer = RobertaTokenizer.from_pretrained(model_dir)
-ai_model = RobertaForSequenceClassification.from_pretrained(model_dir)
+
+try:
+    ai_model = RobertaForSequenceClassification.from_pretrained(model_dir, from_tf=False)
+except Exception as e:
+    logging.error(f"Failed to load model: {e}")
+    st.error(f"Failed to load model: {e}")
+    st.stop()
+
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 ai_model.to(device)
 
