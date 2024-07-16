@@ -25,11 +25,12 @@ def preprocess_text(text):
     text = text.lower()  # Convert to lowercase
     return text
 
-# Download model and tokenizer from Google Drive
+# Download model and tokenizer from Google Drive if not already cached
 def download_from_drive(file_id, output):
-    url = f"https://drive.google.com/uc?export=download&id={file_id}"
-    gdown.download(url, output, quiet=True)
-    logging.info(f"Downloaded {output} from {url}")
+    if not os.path.exists(output):
+        url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        gdown.download(url, output, quiet=True)
+        logging.info(f"Downloaded {output} from {url}")
 
 model_files = {
     "config.json": "1s9Ag8YFisAtcEMc9hXSTw15wLMlcnz6R",
@@ -53,15 +54,21 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 ai_model.to(device)
 
 # Load the toxicity prediction model and vectorizer from GitHub
-def load_model(url):
-    response = requests.get(url)
-    response.raise_for_status()  # Check that the request was successful
-    return joblib.load(BytesIO(response.content))
+def load_model(url, output_path):
+    if not os.path.exists(output_path):
+        response = requests.get(url)
+        response.raise_for_status()  # Check that the request was successful
+        with open(output_path, 'wb') as f:
+            f.write(response.content)
+        logging.info(f"Downloaded model from {url}")
 
-model_url = 'https://github.com/Divya-coder-isb/F-B/blob/main/best_xgboost_model.joblib?raw=true'
-vectorizer_url = 'https://github.com/Divya-coder-isb/F-B/blob/main/tfidf_vectorizer.joblib?raw=true'
-toxicity_model = load_model(model_url)
-vectorizer = load_model(vectorizer_url)
+toxicity_model_path = 'best_xgboost_model.joblib'
+vectorizer_path = 'tfidf_vectorizer.joblib'
+load_model('https://github.com/Divya-coder-isb/F-B/blob/main/best_xgboost_model.joblib?raw=true', toxicity_model_path)
+load_model('https://github.com/Divya-coder-isb/F-B/blob/main/tfidf_vectorizer.joblib?raw=true', vectorizer_path)
+
+toxicity_model = joblib.load(toxicity_model_path)
+vectorizer = joblib.load(vectorizer_path)
 
 # Function to predict AI or Human generated text
 def predict_ai(text):
