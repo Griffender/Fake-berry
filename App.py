@@ -1,39 +1,36 @@
 import streamlit as st
-import os
-import requests
-from transformers import RobertaTokenizer, RobertaForSequenceClassification
 import torch
+from transformers import RobertaTokenizer, RobertaForSequenceClassification
+import re
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
+import joblib
+import requests
+from io import BytesIO
+import gdown
+import os
 import logging
-import json
 
 # Set up logging
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
-# Function to download file from Google Drive
-def download_from_drive(file_id, destination):
-    URL = "https://drive.google.com/uc?export=download"
-    session = requests.Session()
-    response = session.get(URL, params={'id': file_id}, stream=True)
-    token = get_confirm_token(response)
-    if token:
-        params = {'id': file_id, 'confirm': token}
-        response = session.get(URL, params=params, stream=True)
-    save_response_content(response, destination)
+# Function for basic text preprocessing
+def preprocess_text(text):
+    text = re.sub(r'\s+', ' ', text)  # Remove extra spaces
+    text = re.sub(r'\[.*?\]', '', text)  # Remove text in square brackets
+    text = re.sub(r'\w*\d\w*', '', text)  # Remove words containing numbers
+    text = re.sub(r'https?://\S+|www\.\S+', '', text)  # Remove URLs
+    text = text.lower()  # Convert to lowercase
+    return text
 
-def get_confirm_token(response):
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            return value
-    return None
+# Download model and tokenizer from Google Drive
+def download_from_drive(file_id, output):
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+    gdown.download(url, output, quiet=True)
+    logging.info(f"Downloaded {output} from {url}")
 
-def save_response_content(response, destination):
-    CHUNK_SIZE = 32768
-    with open(destination, "wb") as f:
-        for chunk in response.iter_content(CHUNK_SIZE):
-            if chunk:  # filter out keep-alive new chunks
-                f.write(chunk)
-
-# URLs to your model files hosted on Google Drive
 model_files = {
     "config.json": "1s9Ag8YFisAtcEMc9hXSTw15wLMlcnz6R",
     "merges.txt": "14ETjCKd5rFailuwbxS85B-7BW28BJgYI",
@@ -43,66 +40,106 @@ model_files = {
     "vocab.json": "16XBmWUhoAWGvmX6xYwiRpNZf1REAGSit"
 }
 
-model_dir = './pytorch_model'
+model_dir = './saved_model'
 os.makedirs(model_dir, exist_ok=True)
 
-# Download model files if they do not exist
 for filename, file_id in model_files.items():
-    filepath = os.path.join(model_dir, filename)
-    if not os.path.exists(filepath):
-        st.info(f"Downloading {filename}...")
-        try:
-            download_from_drive(file_id, filepath)
-            st.info(f"{filename} downloaded.")
-        except Exception as e:
-            st.error(f"Error downloading {filename}: {e}")
-            logging.error(f"Error downloading {filename}: {e}")
+    download_from_drive(file_id, os.path.join(model_dir, filename))
 
-# Verify that the model files have been downloaded correctly
-for filename in model_files.keys():
-    filepath = os.path.join(model_dir, filename)
-    if not os.path.exists(filepath):
-        st.error(f"File {filename} not found in {model_dir}. Please check the file ID and try again.")
-        st.stop()
-    elif os.path.getsize(filepath) == 0:
-        st.error(f"File {filename} is empty. Please check the file ID and try again.")
-        st.stop()
-
-# Load the tokenizer and model
-try:
-    tokenizer = RobertaTokenizer.from_pretrained(model_dir)
-except json.JSONDecodeError as e:
-    logging.error(f"JSON decode error while loading tokenizer: {e}")
-    st.error(f"JSON decode error: {e}")
-    st.stop()
-except Exception as e:
-    logging.error(f"Failed to load tokenizer: {e}")
-    st.error(f"Failed to load tokenizer: {e}")
-    st.stop()
-
-try:
-    ai_model = RobertaForSequenceClassification.from_pretrained(
-        model_dir,
-        from_tf=False,
-        torch_dtype=torch.float16,
-        low_cpu_mem_usage=True,
-        use_safetensors=True,
-    )
-except Exception as e:
-    logging.error(f"Failed to load model: {e}")
-    st.error(f"Failed to load model: {e}")
-    st.stop()
-
+# Load the AI detection model and tokenizer
+tokenizer = RobertaTokenizer.from_pretrained(model_dir)
+ai_model = RobertaForSequenceClassification.from_pretrained(model_dir)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 ai_model.to(device)
 
+# Load the toxicity prediction model and vectorizer from GitHub
+def load_model(url):
+    response = requests.get(url)
+    response.raise_for_status()  # Check that the request was successful
+    return joblib.load(BytesIO(response.content))
+
+model_url = 'https://github.com/Divya-coder-isb/F-B/blob/main/best_xgboost_model.joblib?raw=true'
+vectorizer_url = 'https://github.com/Divya-coder-isb/F-B/blob/main/tfidf_vectorizer.joblib?raw=true'
+toxicity_model = load_model(model_url)
+vectorizer = load_model(vectorizer_url)
+
+# Function to predict AI or Human generated text
+def predict_ai(text):
+    ai_model.eval()
+    text = preprocess_text(text)
+    inputs = tokenizer(text, return_tensors='pt', padding=True, truncation=True, max_length=512).to(device)
+    with torch.no_grad():
+        outputs = ai_model(**inputs)
+        logits = outputs.logits
+        score = torch.sigmoid(logits).item()
+    return score
+
+# Function to predict toxicity
+def predict_toxicity(text, threshold):
+    transformed_input = vectorizer.transform([text])
+    proba = toxicity_model.predict_proba(transformed_input)[0, 1]
+    prediction = (proba >= threshold).astype(int)
+    return proba, prediction
+
+# Functions to calculate fairness metrics
+def calculate_demographic_parity(predictions, sensitive_attrs):
+    rates = predictions.groupby(sensitive_attrs).mean()
+    return rates.to_dict()
+
+def calculate_predictive_parity(predictions, labels, sensitive_attrs):
+    df = pd.DataFrame({'predictions': predictions, 'labels': labels, 'group': sensitive_attrs})
+    positive_pred = df[df['labels'] == 1]
+    rates = positive_pred.groupby('group').mean()
+    return rates['predictions'].to_dict()
+
+def plot_roc_curve(y_true, y_scores):
+    fpr, tpr, _ = roc_curve(y_true, y_scores)
+    roc_auc = auc(fpr, tpr)
+    plt.figure(figsize=(8, 6))
+    plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic')
+    plt.legend(loc="lower right")
+    plt.grid(True)
+    st.pyplot(plt)
+
+# Streamlit User Interface
 st.title("Text Classification and Toxicity Prediction")
 
 input_text = st.text_area("Enter text to classify")
 
 if st.button("Classify"):
     if input_text:
-        # Add your prediction and classification logic here
-        st.write("Processing your input...")
+        ai_score = predict_ai(input_text)
+        if ai_score > 0.5:
+            st.write("AI Generated Text")
+            st.write("Running toxicity prediction model...")
+            
+            # Sidebar for user inputs
+            threshold = st.sidebar.slider('Classification Threshold', 0.0, 1.0, 0.237, 0.01)
+            
+            # Predict toxicity
+            proba, prediction = predict_toxicity(input_text, threshold)
+            st.write('Probability of Toxicity:', proba)
+            st.write('Toxic' if prediction else 'Not Toxic')
+            
+            # Simulate sensitive attributes and labels for fairness metrics
+            sensitive_attrs = np.random.choice(['male', 'female', 'non-binary'], size=100)
+            labels = np.random.randint(0, 2, size=100)
+            predictions = np.random.rand(100) > 0.5
+            
+            # Calculate and display fairness metrics
+            dp = calculate_demographic_parity(pd.Series(predictions), pd.Series(sensitive_attrs))
+            pp = calculate_predictive_parity(pd.Series(predictions), pd.Series(labels), pd.Series(sensitive_attrs))
+            st.write("## Fairness Metrics")
+            st.write("Demographic Parity:", dp)
+            st.write("Predictive Parity:", pp)
+            
+            # ROC Curve
+            plot_roc_curve(labels, predictions)
+        else:
+            st.write("Human Generated Text")
     else:
         st.write("Please enter text to classify.")
