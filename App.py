@@ -11,6 +11,10 @@ import requests
 from io import BytesIO
 import gdown
 import os
+import logging
+
+# Set up logging
+logging.basicConfig(filename='app.log', level=logging.INFO)
 
 # Function for basic text preprocessing
 def preprocess_text(text):
@@ -23,7 +27,9 @@ def preprocess_text(text):
 
 # Download model and tokenizer from Google Drive
 def download_from_drive(file_id, output):
-    gdown.download(f"https://drive.google.com/uc?export=download&id={file_id}", output, quiet=False)
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+    gdown.download(url, output, quiet=True)
+    logging.info(f"Downloaded {output} from {url}")
 
 model_files = {
     "config.json": "1s9Ag8YFisAtcEMc9hXSTw15wLMlcnz6R",
