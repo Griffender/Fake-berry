@@ -9,6 +9,8 @@ from sklearn.metrics import roc_curve, auc
 import joblib
 import requests
 from io import BytesIO
+import gdown
+import os
 
 # Function for basic text preprocessing
 def preprocess_text(text):
@@ -19,10 +21,28 @@ def preprocess_text(text):
     text = text.lower()  # Convert to lowercase
     return text
 
+# Download model and tokenizer from Google Drive
+def download_from_drive(file_id, output):
+    gdown.download(f"https://drive.google.com/uc?export=download&id={file_id}", output, quiet=False)
+
+model_files = {
+    "config.json": "1s9Ag8YFisAtcEMc9hXSTw15wLMlcnz6R",
+    "merges.txt": "14ETjCKd5rFailuwbxS85B-7BW28BJgYI",
+    "model.safetensors": "17cSA1Kd6xqZ27xUDsoK65hXbMMnZsR4p",
+    "special_tokens_map.json": "1HZxHafbwhV4fd9p6VgE0jBsrNy0h0Nsj",
+    "tokenizer_config.json": "19cF9V6xGlcRy4UIgUhgZsWL67JFgE9Rm",
+    "vocab.json": "16XBmWUhoAWGvmX6xYwiRpNZf1REAGSit"
+}
+
+model_dir = './saved_model'
+os.makedirs(model_dir, exist_ok=True)
+
+for filename, file_id in model_files.items():
+    download_from_drive(file_id, os.path.join(model_dir, filename))
+
 # Load the AI detection model and tokenizer
-model_path = './saved_model'
-tokenizer = RobertaTokenizer.from_pretrained(model_path)
-ai_model = RobertaForSequenceClassification.from_pretrained(model_path)
+tokenizer = RobertaTokenizer.from_pretrained(model_dir)
+ai_model = RobertaForSequenceClassification.from_pretrained(model_dir)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 ai_model.to(device)
 
