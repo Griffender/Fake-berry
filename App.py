@@ -30,12 +30,12 @@ def download_from_drive(file_id, destination):
     
     session = requests.Session()
     
-    response = session.get(URL, params = { 'id' : file_id }, stream = True)
+    response = session.get(URL, params={'id': file_id}, stream=True)
     token = get_confirm_token(response)
     
     if token:
-        params = { 'id' : file_id, 'confirm' : token }
-        response = session.get(URL, params = params, stream = True)
+        params = {'id': file_id, 'confirm': token}
+        response = session.get(URL, params=params, stream=True)
     
     save_response_content(response, destination)    
     logging.info(f"Downloaded {destination} from Google Drive file ID {file_id}")
@@ -57,13 +57,13 @@ def save_response_content(response, destination):
 model_files = {
     "config.json": "1s9Ag8YFisAtcEMc9hXSTw15wLMlcnz6R",
     "merges.txt": "14ETjCKd5rFailuwbxS85B-7BW28BJgYI",
-    "model.safetensors": "17cSA1Kd6xqZ27xUDsoK65hXbMMnZsR4p",
+    "pytorch_model.bin": "17cSA1Kd6xqZ27xUDsoK65hXbMMnZsR4p",  # Updated to use PyTorch model
     "special_tokens_map.json": "1HZxHafbwhV4fd9p6VgE0jBsrNy0h0Nsj",
     "tokenizer_config.json": "19cF9V6xGlcRy4UIgUhgZsWL67JFgE9Rm",
     "vocab.json": "16XBmWUhoAWGvmX6xYwiRpNZf1REAGSit"
 }
 
-model_dir = './saved_model'
+model_dir = './pytorch_model'
 os.makedirs(model_dir, exist_ok=True)
 
 for filename, file_id in model_files.items():
@@ -78,7 +78,7 @@ for filename in model_files.keys():
 tokenizer = RobertaTokenizer.from_pretrained(model_dir)
 
 try:
-    ai_model = RobertaForSequenceClassification.from_pretrained(model_dir, from_tf=False)
+    ai_model = RobertaForSequenceClassification.from_pretrained(model_dir)
 except Exception as e:
     logging.error(f"Failed to load model: {e}")
     st.error(f"Failed to load model: {e}")
