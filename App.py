@@ -53,7 +53,7 @@ ai_model = RobertaForSequenceClassification.from_pretrained(model_dir)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 ai_model.to(device)
 
-# Load the toxicity prediction model and vectorizer from GitHub
+# Load the toxicity prediction model and vectorizer from GitHub if not already cached
 def load_model(url, output_path):
     if not os.path.exists(output_path):
         response = requests.get(url)
