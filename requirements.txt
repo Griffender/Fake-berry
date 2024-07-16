@@ -10,3 +10,4 @@ gdown
 torch
 transformers
 safetensors
+accelerate
