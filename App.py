@@ -4,6 +4,7 @@ import requests
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 import torch
 import logging
+import json
 
 # Set up logging
 logging.basicConfig(filename='app.log', level=logging.INFO)
@@ -80,7 +81,13 @@ except Exception as e:
     st.stop()
 
 try:
-    ai_model = RobertaForSequenceClassification.from_pretrained(model_dir)
+    ai_model = RobertaForSequenceClassification.from_pretrained(
+        model_dir,
+        from_tf=False,
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True,
+        use_safetensors=True,
+    )
 except Exception as e:
     logging.error(f"Failed to load model: {e}")
     st.error(f"Failed to load model: {e}")
