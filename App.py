@@ -24,9 +24,15 @@ if st.button("Classify"):
         # Check the response status
         if response.status_code == 200:
             result = response.json()
-            # Display the result
+            # Display the result as normal text
+            classification = result.get("classification", "N/A")
+            probability_of_toxicity = result.get("probability_of_toxicity", "N/A")
+            prediction = result.get("prediction", "N/A")
+
             st.write("**Classification Result:**")
-            st.write(result)
+            st.write(f"Classification: {classification}")
+            st.write(f"Probability of Toxicity: {probability_of_toxicity}")
+            st.write(f"Prediction: {prediction}")
         else:
             st.error("Error: Unable to classify the text. Please try again later.")
     else:
