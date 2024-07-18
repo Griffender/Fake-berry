@@ -3,6 +3,15 @@ import requests
 import matplotlib.pyplot as plt
 from PIL import Image
 
+# Function to classify text and predict toxicity
+def classify_text(text, threshold, url):
+    input_data = {"text": text, "ai_score_threshold": threshold}
+    response = requests.post(url, json=input_data)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
+
 # Define the ngrok URL
 url = "https://eab2-34-16-216-78.ngrok-free.app/verify_and_check_bias"
 
@@ -26,32 +35,17 @@ ai_score_threshold = left_col.slider("AI Score Threshold", 0.0, 1.0, 0.5)
 
 if left_col.button("Classify"):
     if input_text:
-        # Define the input data for AI classification
-        input_data = {
-            "text": input_text,
-            "ai_score_threshold": ai_score_threshold
-        }
-
-        # Send a POST request to the endpoint
-        response = requests.post(url, json=input_data)
-
-        # Check the response status
-        if response.status_code == 200:
-            result = response.json()
-            # Display the result as normal text
+        result = classify_text(input_text, ai_score_threshold, url)
+        if result:
             classification = result.get("classification", "N/A")
             left_col.write("**Classification Result:**")
             left_col.write(f"Classification: {classification}")
 
             if classification == "AI Generated Text":
-                # Define the input data for toxicity prediction
-                response_toxicity = requests.post(url, json=input_data)
-
-                # Check the response status
-                if response_toxicity.status_code == 200:
-                    result_toxicity = response_toxicity.json()
-                    probability_of_toxicity = result_toxicity.get("probability_of_toxicity", 0.0)
-                    prediction = result_toxicity.get("prediction", "N/A")
+                toxicity_result = classify_text(input_text, ai_score_threshold, url)
+                if toxicity_result:
+                    probability_of_toxicity = toxicity_result.get("probability_of_toxicity", 0.0)
+                    prediction = toxicity_result.get("prediction", "N/A")
 
                     left_col.write(f"Prediction: {prediction}")
 
