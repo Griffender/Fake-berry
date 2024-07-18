@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 from PIL import Image
 from io import BytesIO
+import base64
 
 # Set up the page configuration
 st.set_page_config(page_title="Fake Berry", page_icon=":robot_face:", layout="wide")
@@ -12,9 +13,6 @@ response = requests.get(banner_image_url)
 banner_image = Image.open(BytesIO(response.content))
 
 # Convert the banner image to base64
-import base64
-from io import BytesIO
-
 buffered = BytesIO()
 banner_image.save(buffered, format="PNG")
 img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
@@ -31,23 +29,33 @@ st.markdown(banner_html, unsafe_allow_html=True)
 # Title
 st.title("Fake Berry: Your Ethical Watchdog")
 
-# Query input
-st.subheader("Craft Your Query: Unmask Bias, Confirm Fairness, and Validate Authenticity")
-user_query = st.text_area("Enter text here:")
+# Layout for input and metrics
+with st.container():
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        st.subheader("Craft Your Query: Unmask Bias, Confirm Fairness, and Validate Authenticity")
+        user_query = st.text_area("Enter text here:", height=200)
+
+    with col2:
+        st.markdown(f"<div style='text-align: center;'><span style='color: red; font-weight: bold;'>Detected fabrication: AI generated content</span></div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center;'>Probability of toxicity:</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; font-weight: bold;'>87%</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center;'>Prediction: <span style='color: green; font-weight: bold;'>Appears benign</span></div>", unsafe_allow_html=True)
+        st.image("/mnt/data/image.png", width=150)
 
 # Tailor your metrics
 st.subheader("Tailor your metrics")
 ai_score_threshold = st.slider("AI Score Threshold", 0.0, 1.0, 0.45)
-
-# Variables to hold toxicity result and updated result
-toxicity_result = None
+toxicity_threshold = st.slider("Toxicity Threshold", 0.0, 1.0, 0.6)
 
 # Submit button
 if st.button("Apply"):
     # Send the user query to the Flask API
     payload = {
         "text": user_query,
-        "ai_score_threshold": ai_score_threshold
+        "ai_score_threshold": ai_score_threshold,
+        "threshold": toxicity_threshold
     }
     try:
         response = requests.post("https://eab2-34-16-216-78.ngrok-free.app/verify_and_check_bias", json=payload)
@@ -59,18 +67,6 @@ if st.button("Apply"):
             st.markdown(f"### Detected fabrication: **AI generated content**")
             st.markdown(f"**Probability of toxicity:** {result.get('probability_of_toxicity', 0) * 100:.2f}%")
             st.markdown(f"**Prediction:** {'Toxic' if result.get('prediction') else 'Not Toxic'}")
-            toxicity_threshold = st.slider("Toxicity Threshold", 0.0, 1.0, 0.6, key="toxicity_threshold")
-
-            # Re-check the toxicity with the new threshold if needed
-            if st.button("Re-check Toxicity"):
-                payload["threshold"] = toxicity_threshold
-                payload["text"] = user_query  # Include the text again in the payload
-                payload["ai_score_threshold"] = ai_score_threshold  # Include the AI score threshold in the payload
-                response = requests.post("http://your-flask-api-url/verify_and_check_bias", json=payload)
-                response.raise_for_status()
-                updated_result = response.json()
-                st.markdown(f"**Updated Probability of toxicity:** {updated_result.get('probability_of_toxicity', 0) * 100:.2f}%")
-                st.markdown(f"**Updated Prediction:** {'Toxic' if updated_result.get('prediction') else 'Not Toxic'}")
         else:
             st.markdown(f"### **Appears benign**")
             st.markdown(f"**Probability of toxicity:** 0%")
