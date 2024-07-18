@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 url = "https://eab2-34-16-216-78.ngrok-free.app/verify_and_check_bias"
 
 # Load the banner image
-banner_path = "/mnt/data/image.png"
+banner_path = "https://github.com/Griffender/Fake-berry/blob/main/Banner.png"
 banner_image = st.image(banner_path)
 
 # Streamlit app
