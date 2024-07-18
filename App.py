@@ -30,25 +30,6 @@ if st.button("Classify"):
             classification = result.get("classification", "N/A")
             st.write("**Classification Result:**")
             st.write(f"Classification: {classification}")
-
-            if classification == "AI Generated Text":
-                # Show the toxicity threshold slider
-                threshold = st.slider("Toxicity Threshold", 0.0, 1.0, 0.5)
-                # Define the input data for toxicity prediction
-                input_data["threshold"] = threshold
-                # Send a POST request to the endpoint with the updated data
-                response = requests.post(url, json=input_data)
-
-                # Check the response status
-                if response.status_code == 200:
-                    result = response.json()
-                    probability_of_toxicity = result.get("probability_of_toxicity", "N/A")
-                    prediction = result.get("prediction", "N/A")
-
-                    st.write(f"Probability of Toxicity: {probability_of_toxicity}")
-                    st.write(f"Prediction: {prediction}")
-                else:
-                    st.error("Error: Unable to classify the text for toxicity. Please try again later.")
         else:
             st.error("Error: Unable to classify the text. Please try again later.")
     else:
