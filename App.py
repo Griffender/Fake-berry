@@ -32,6 +32,9 @@ if st.button("Classify"):
             st.write(f"Classification: {classification}")
 
             if classification == "AI Generated Text":
+                ai_score = result.get("ai_score", "N/A")
+                st.write(f"AI Score: {ai_score}")
+
                 # Define the input data for toxicity prediction
                 response_toxicity = requests.post(url, json=input_data)
 
