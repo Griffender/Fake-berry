@@ -34,22 +34,27 @@ if st.button("Apply"):
         "threshold": toxicity_threshold,
         "ai_score_threshold": ai_score_threshold
     }
-    response = requests.post("https://d0b3-34-16-187-100.ngrok-free.app/verify_and_check_bias", json=payload)
-    result = response.json()
+    try:
+        response = requests.post("http://your-flask-api-url/verify_and_check_bias", json=payload)
+        response.raise_for_status()  # Raise an error for bad status codes
+        result = response.json()
 
-    # Display the result
-    if result["classification"] == "AI Generated Text":
-        st.markdown(f"### Detected fabrication: **AI generated content**")
-        st.markdown(f"**Probability of toxicity:** {result['probability_of_toxicity']*100:.2f}%")
-        st.markdown(f"**Prediction:** {'Toxic' if result['prediction'] else 'Not Toxic'}")
-    else:
-        st.markdown(f"### **Appears benign**")
-        st.markdown(f"**Probability of toxicity:** 0%")
-        st.markdown(f"**Prediction:** Not Toxic")
+        # Display the result
+        if "classification" in result and result["classification"] == "AI Generated Text":
+            st.markdown(f"### Detected fabrication: **AI generated content**")
+            st.markdown(f"**Probability of toxicity:** {result.get('probability_of_toxicity', 0) * 100:.2f}%")
+            st.markdown(f"**Prediction:** {'Toxic' if result.get('prediction') else 'Not Toxic'}")
+        else:
+            st.markdown(f"### **Appears benign**")
+            st.markdown(f"**Probability of toxicity:** 0%")
+            st.markdown(f"**Prediction:** Not Toxic")
 
-    # Display the metrics
-    st.subheader("Metrics")
-    col1, col2 = st.columns(2)
-    col1.markdown(f"**AI Score:** {result['ai_score']*100:.2f}%")
-    col2.markdown(f"**Toxicity Score:** {result['toxicity_score']*100:.2f}%")
-
+        # Display the metrics if they exist in the result
+        st.subheader("Metrics")
+        col1, col2 = st.columns(2)
+        col1.markdown(f"**AI Score:** {result.get('ai_score', 0) * 100:.2f}%")
+        col2.markdown(f"**Toxicity Score:** {result.get('toxicity_score', 0) * 100:.2f}%")
+    except requests.exceptions.RequestException as e:
+        st.error(f"API request failed: {e}")
+    except KeyError as e:
+        st.error(f"Missing key in API response: {e}")
