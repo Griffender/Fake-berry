@@ -19,8 +19,20 @@ url = "https://eab2-34-16-216-78.ngrok-free.app/verify_and_check_bias"
 banner_url = "https://github.com/Griffender/Fake-berry/raw/main/Banner.png"
 banner_image = Image.open(requests.get(banner_url, stream=True).raw)
 
-# Display the banner image as a header
-st.image(banner_image, use_column_width=True)
+# Display the banner image as a header with configurable size
+st.markdown(
+    f"""
+    <style>
+    .banner-img {{
+        height: 150px;
+        width: 100%;
+        object-fit: cover;
+    }}
+    </style>
+    <img src="{banner_url}" class="banner-img">
+    """,
+    unsafe_allow_html=True
+)
 
 # Streamlit app
 st.title("AI vs Human Text Classification")
