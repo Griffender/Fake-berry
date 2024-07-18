@@ -39,6 +39,9 @@ user_query = st.text_area("Enter text here:")
 st.subheader("Tailor your metrics")
 ai_score_threshold = st.slider("AI Score Threshold", 0.0, 1.0, 0.45)
 
+# Variables to hold toxicity result and updated result
+toxicity_result = None
+
 # Submit button
 if st.button("Apply"):
     # Send the user query to the Flask API
@@ -47,7 +50,7 @@ if st.button("Apply"):
         "ai_score_threshold": ai_score_threshold
     }
     try:
-        response = requests.post("https://d0b3-34-16-187-100.ngrok-free.app/verify_and_check_bias", json=payload)
+        response = requests.post("http://your-flask-api-url/verify_and_check_bias", json=payload)
         response.raise_for_status()  # Raise an error for bad status codes
         result = response.json()
 
@@ -56,16 +59,18 @@ if st.button("Apply"):
             st.markdown(f"### Detected fabrication: **AI generated content**")
             st.markdown(f"**Probability of toxicity:** {result.get('probability_of_toxicity', 0) * 100:.2f}%")
             st.markdown(f"**Prediction:** {'Toxic' if result.get('prediction') else 'Not Toxic'}")
-            toxicity_threshold = st.slider("Toxicity Threshold", 0.0, 1.0, 0.6)
+            toxicity_threshold = st.slider("Toxicity Threshold", 0.0, 1.0, 0.6, key="toxicity_threshold")
 
             # Re-check the toxicity with the new threshold if needed
             if st.button("Re-check Toxicity"):
                 payload["threshold"] = toxicity_threshold
+                payload["text"] = user_query  # Include the text again in the payload
+                payload["ai_score_threshold"] = ai_score_threshold  # Include the AI score threshold in the payload
                 response = requests.post("http://your-flask-api-url/verify_and_check_bias", json=payload)
                 response.raise_for_status()
-                result = response.json()
-                st.markdown(f"**Updated Probability of toxicity:** {result.get('probability_of_toxicity', 0) * 100:.2f}%")
-                st.markdown(f"**Updated Prediction:** {'Toxic' if result.get('prediction') else 'Not Toxic'}")
+                updated_result = response.json()
+                st.markdown(f"**Updated Probability of toxicity:** {updated_result.get('probability_of_toxicity', 0) * 100:.2f}%")
+                st.markdown(f"**Updated Prediction:** {'Toxic' if updated_result.get('prediction') else 'Not Toxic'}")
         else:
             st.markdown(f"### **Appears benign**")
             st.markdown(f"**Probability of toxicity:** 0%")
