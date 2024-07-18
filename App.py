@@ -11,8 +11,25 @@ banner_image_url = "https://github.com/Griffender/Fake-berry/blob/main/Banner.pn
 response = requests.get(banner_image_url)
 banner_image = Image.open(BytesIO(response.content))
 
-# Display the banner
-st.image(banner_image, use_column_width=False)
+# Convert the banner image to base64
+import base64
+from io import BytesIO
+
+buffered = BytesIO()
+banner_image.save(buffered, format="PNG")
+img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+# Create the marquee effect using HTML and CSS
+marquee_html = f"""
+<div style="width: 100%; overflow: hidden; background-color: #f1f1f1;">
+  <marquee behavior="scroll" direction="left" scrollamount="5">
+    <img src="data:image/png;base64,{img_str}" style="width: 2000px; height: 150px;" />
+  </marquee>
+</div>
+"""
+
+# Display the marquee
+st.markdown(marquee_html, unsafe_allow_html=True)
 
 # Title
 st.title("Fake Berry: Your Ethical Watchdog")
@@ -35,7 +52,7 @@ if st.button("Apply"):
         "ai_score_threshold": ai_score_threshold
     }
     try:
-        response = requests.post("https://d0b3-34-16-187-100.ngrok-free.app/verify_and_check_bias", json=payload)
+        response = requests.post("http://your-flask-api-url/verify_and_check_bias", json=payload)
         response.raise_for_status()  # Raise an error for bad status codes
         result = response.json()
 
