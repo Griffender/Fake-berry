@@ -1,13 +1,17 @@
 import streamlit as st
 import requests
 import matplotlib.pyplot as plt
+from PIL import Image
 
 # Define the ngrok URL
 url = "https://eab2-34-16-216-78.ngrok-free.app/verify_and_check_bias"
 
-# Load the banner image
-banner_path = "https://github.com/Griffender/Fake-berry/blob/main/Banner.png"
-banner_image = st.image(banner_path)
+# Load the banner image from the URL
+banner_url = "https://github.com/Griffender/Fake-berry/raw/main/Banner.png"
+banner_image = Image.open(requests.get(banner_url, stream=True).raw)
+
+# Display the banner image
+st.image(banner_image, use_column_width=True)
 
 # Streamlit app
 st.title("AI vs Human Text Classification")
