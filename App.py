@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import plotly.graph_objects as go
 
 # Define the ngrok URL
 url = "https://eab2-34-16-216-78.ngrok-free.app/verify_and_check_bias"
@@ -46,6 +47,25 @@ if st.button("Classify"):
 
                     st.write(f"Probability of Toxicity: {probability_of_toxicity}")
                     st.write(f"Prediction: {prediction}")
+
+                    # Plot AI score as a circle
+                    fig_ai = go.Figure(go.Indicator(
+                        mode = "gauge+number",
+                        value = ai_score * 100,
+                        title = {'text': "AI Score"},
+                        gauge = {'axis': {'range': [0, 100]},
+                                 'bar': {'color': "green"}}))
+
+                    # Plot toxicity score as a circle
+                    fig_toxicity = go.Figure(go.Indicator(
+                        mode = "gauge+number",
+                        value = probability_of_toxicity * 100,
+                        title = {'text': "Toxicity Score"},
+                        gauge = {'axis': {'range': [0, 100]},
+                                 'bar': {'color': "red"}}))
+
+                    st.plotly_chart(fig_ai)
+                    st.plotly_chart(fig_toxicity)
                 else:
                     st.error("Error: Unable to classify the text for toxicity. Please try again later.")
         else:
