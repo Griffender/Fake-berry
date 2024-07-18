@@ -19,17 +19,14 @@ buffered = BytesIO()
 banner_image.save(buffered, format="PNG")
 img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-# Create the marquee effect using HTML and CSS
-marquee_html = f"""
-<div style="width: 100%; overflow: hidden; background-color: #f1f1f1;">
-  <marquee behavior="scroll" direction="left" scrollamount="5">
+# Display the banner with adjusted size
+banner_html = f"""
+<div style="width: 100%; overflow: hidden; background-color: #f1f1f1; text-align: center;">
     <img src="data:image/png;base64,{img_str}" style="width: 2000px; height: 150px;" />
-  </marquee>
 </div>
 """
 
-# Display the marquee
-st.markdown(marquee_html, unsafe_allow_html=True)
+st.markdown(banner_html, unsafe_allow_html=True)
 
 # Title
 st.title("Fake Berry: Your Ethical Watchdog")
@@ -41,14 +38,12 @@ user_query = st.text_area("Enter text here:")
 # Tailor your metrics
 st.subheader("Tailor your metrics")
 ai_score_threshold = st.slider("AI Score Threshold", 0.0, 1.0, 0.45)
-toxicity_threshold = st.slider("Toxicity Threshold", 0.0, 1.0, 0.6)
 
 # Submit button
 if st.button("Apply"):
     # Send the user query to the Flask API
     payload = {
         "text": user_query,
-        "threshold": toxicity_threshold,
         "ai_score_threshold": ai_score_threshold
     }
     try:
@@ -61,6 +56,16 @@ if st.button("Apply"):
             st.markdown(f"### Detected fabrication: **AI generated content**")
             st.markdown(f"**Probability of toxicity:** {result.get('probability_of_toxicity', 0) * 100:.2f}%")
             st.markdown(f"**Prediction:** {'Toxic' if result.get('prediction') else 'Not Toxic'}")
+            toxicity_threshold = st.slider("Toxicity Threshold", 0.0, 1.0, 0.6)
+
+            # Re-check the toxicity with the new threshold if needed
+            if st.button("Re-check Toxicity"):
+                payload["threshold"] = toxicity_threshold
+                response = requests.post("http://your-flask-api-url/verify_and_check_bias", json=payload)
+                response.raise_for_status()
+                result = response.json()
+                st.markdown(f"**Updated Probability of toxicity:** {result.get('probability_of_toxicity', 0) * 100:.2f}%")
+                st.markdown(f"**Updated Prediction:** {'Toxic' if result.get('prediction') else 'Not Toxic'}")
         else:
             st.markdown(f"### **Appears benign**")
             st.markdown(f"**Probability of toxicity:** 0%")
