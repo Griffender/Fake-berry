@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
 # Define the ngrok URL
 url = "https://eab2-34-16-216-78.ngrok-free.app/verify_and_check_bias"
@@ -33,39 +33,26 @@ if st.button("Classify"):
             st.write(f"Classification: {classification}")
 
             if classification == "AI Generated Text":
-                ai_score = result.get("ai_score", "N/A")
-                st.write(f"AI Score: {ai_score}")
-
                 # Define the input data for toxicity prediction
                 response_toxicity = requests.post(url, json=input_data)
 
                 # Check the response status
                 if response_toxicity.status_code == 200:
                     result_toxicity = response_toxicity.json()
-                    probability_of_toxicity = result_toxicity.get("probability_of_toxicity", "N/A")
+                    probability_of_toxicity = result_toxicity.get("probability_of_toxicity", 0.0)
                     prediction = result_toxicity.get("prediction", "N/A")
 
-                    st.write(f"Probability of Toxicity: {probability_of_toxicity}")
                     st.write(f"Prediction: {prediction}")
 
-                    # Plot AI score as a circle
-                    fig_ai = go.Figure(go.Indicator(
-                        mode = "gauge+number",
-                        value = ai_score * 100,
-                        title = {'text': "AI Score"},
-                        gauge = {'axis': {'range': [0, 100]},
-                                 'bar': {'color': "green"}}))
-
-                    # Plot toxicity score as a circle
-                    fig_toxicity = go.Figure(go.Indicator(
-                        mode = "gauge+number",
-                        value = probability_of_toxicity * 100,
-                        title = {'text': "Toxicity Score"},
-                        gauge = {'axis': {'range': [0, 100]},
-                                 'bar': {'color': "red"}}))
-
-                    st.plotly_chart(fig_ai)
-                    st.plotly_chart(fig_toxicity)
+                    # Plot the circular progress chart for toxicity score
+                    fig, ax = plt.subplots()
+                    ax.pie([probability_of_toxicity, 1 - probability_of_toxicity], 
+                           startangle=90, colors=['#FF6F61', '#E0E0E0'], 
+                           wedgeprops={'width': 0.3})
+                    ax.text(0, 0, f"{int(probability_of_toxicity * 100)}%", 
+                            ha='center', va='center', fontsize=20, color='#FF6F61')
+                    ax.set_aspect('equal')
+                    st.pyplot(fig)
                 else:
                     st.error("Error: Unable to classify the text for toxicity. Please try again later.")
         else:
