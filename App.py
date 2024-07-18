@@ -35,7 +35,7 @@ if st.button("Apply"):
         "ai_score_threshold": ai_score_threshold
     }
     try:
-        response = requests.post("http://your-flask-api-url/verify_and_check_bias", json=payload)
+        response = requests.post("https://d0b3-34-16-187-100.ngrok-free.app/verify_and_check_bias", json=payload)
         response.raise_for_status()  # Raise an error for bad status codes
         result = response.json()
 
