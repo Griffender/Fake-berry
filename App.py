@@ -12,7 +12,7 @@ response = requests.get(banner_image_url)
 banner_image = Image.open(BytesIO(response.content))
 
 # Display the banner
-st.image(banner_image, use_column_width=True)
+st.image(banner_image, use_column_width=False)
 
 # Title
 st.title("Fake Berry: Your Ethical Watchdog")
