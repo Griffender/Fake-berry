@@ -13,7 +13,7 @@ def classify_text(text, threshold, url):
         return None
 
 # Define the ngrok URL
-url = "https://ca1e-34-125-30-237.ngrok-free.app/verify_and_check_bias"
+url =  https://70cd-35-227-191-232.ngrok-free.app/verify_and_check_bias"
 
 # Load the banner image from the URL
 banner_url = "https://github.com/Griffender/Fake-berry/raw/main/Banner.png"
